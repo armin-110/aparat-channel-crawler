@@ -43,10 +43,8 @@ channel_link= list(itertools.chain(*df0.iloc[:, [3]].values.tolist()))
 print(len(channel_link))
 channel_link_uniq = list(dict.fromkeys(channel_link))
 print(len(channel_link_uniq))
-# print(len(list(unique_everseen(channel_link))))
-# content_link = list(itertools.chain(*df0.iloc[:, [8]].values.tolist()))
-# content_link_uniq = list(dict.fromkeys(content_link))
-# print(len(content_link_uniq))
+connection.close()
+
 
 import aparat_channel_meta
 
@@ -60,6 +58,9 @@ def get_metadata(channel_link):
 
 engine = create_engine('postgresql://postgres:12344321@10.32.141.17/aparat_channel',pool_size=20, max_overflow=100,)
 con=engine.connect()
+date_a=datetime.datetime.now()
+
+db_table_name='aparat_channel_meta'+str(date_a.date()).replace('-','')+str(date_a.time()).split(':')[0]
 
 for i in range(len(channel_link_uniq)):
     print(channel_link_uniq[i])
@@ -70,7 +71,27 @@ for i in range(len(channel_link_uniq)):
     date_i=datetime.datetime.now()
     meta['crawling_date']=str(date_i.date()).replace('-','')+str(date_i.time()).split(':')[0]
     data_frame =pd.DataFrame(meta,index=[0])
-    data_frame.to_sql('aparat_channel_meta',con,if_exists='append', index=False)
+    data_frame.to_sql(db_table_name,con,if_exists='append', index=False)
     
+
+connection = psycopg2.connect(user="postgres",
+                            password="12344321",
+                            host="10.32.141.17",
+                            port="5432",
+                            database="aparat_channel")
+cursor = connection.cursor()
+df0= psql.read_sql("SELECT * FROM public.{}".format(db_table_name), connection)
+print(len(df0))
+df1=psql.read_sql("SELECT * FROM public.aparat_channel_meta", connection)
+print(len(df1))
+df2=df1.append(df0)
+print(len(df2))
+df=df2.drop_duplicates(subset=['channel_link'], keep='last')
+print(len(df))
+connection.close()
+
+
+df.to_sql('aparat_channel_meta',con,if_exists='replace', index=False)
+   
 # meta=get_metadata('https://www.aparat.com/u_11513129')
 # print(meta)
